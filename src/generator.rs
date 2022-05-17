@@ -48,6 +48,8 @@ impl Generator {
                 }
             })) as usize;
 
+        debug!("Generating {} passwords with max length {}", self.rules.amount, max_length);
+
         for _ in 0..self.rules.amount {
             let mut password = String::with_capacity(max_length);
             let words = self.get_words();
@@ -86,6 +88,9 @@ impl Generator {
             let word = array.get(self.seed.gen_range(0..array.as_array().unwrap().len())).unwrap();
             words.push(word.as_str().unwrap().to_string());
         }
+        debug!("Got {} words", words.len());
+        debug!("{:?}", words);
+
         words
     }
 
@@ -102,13 +107,17 @@ impl Generator {
         let mut transformed_words: Vec<String> = Vec::with_capacity(words.len());
 
         match &*self.rules.transform {
-            "NONE" => {}
+            "NONE" => {
+                debug!("No transformation, doing nothing.");
+                transformed_words = words.clone();
+            }
             "CAPITALISE" => words.iter().for_each(|word| {
                 let mut c = word.chars();
                 let str = match c.next() {
                     None => String::new(),
                     Some(first) => first.to_uppercase().collect::<String>() + c.as_str(),
                 };
+                debug!("Capitalised word {}", str);
                 transformed_words.push(str);
             }),
             "UPPERCASE_ALL_BUT_FIRST" => words.iter().for_each(|word| {
@@ -118,10 +127,13 @@ impl Generator {
                     None => String::new(),
                     Some(first) => first.to_lowercase().collect::<String>() + c.as_str(),
                 };
+                debug!("Uppercase all but first word {}", str);
                 transformed_words.push(str);
             }),
             "UPPERCASE" => words.iter().for_each(|word| {
-                transformed_words.push(word.to_uppercase());
+                let uppercase = word.to_uppercase();
+                debug!("Uppercase word {}", uppercase);
+                transformed_words.push(uppercase);
             }),
             "RANDOM" => words.iter().for_each(|word| {
                 let mut builder = String::new();
@@ -133,6 +145,7 @@ impl Generator {
                     };
                     builder.push_str(&*new);
                 }
+                debug!("Randomised uppercase and lowercase word {}", builder);
                 transformed_words.push(builder);
             }),
             "ALTERNATING" => words.iter().for_each(|word| {
@@ -145,6 +158,7 @@ impl Generator {
                     };
                     builder.push_str(&*new);
                 }
+                debug!("Alternating uppercase and lowercase word {}", builder);
                 transformed_words.push(builder);
             }),
             _ => {
@@ -153,15 +167,7 @@ impl Generator {
             }
         }
 
-        for word in words {
-            let mut transformed_word = String::new();
-
-            for char in word.chars() {
-                transformed_word.push(char);
-            }
-
-            transformed_words.push(transformed_word);
-        }
+        debug!("Transformed words: {:?}", transformed_words);
 
         transformed_words
     }
@@ -176,18 +182,30 @@ impl Generator {
 
     fn get_separator(&mut self) -> Option<char> {
         match &*self.rules.separator_char {
-            "NONE" => None,
+            "NONE" => {
+                debug!("No separator char");
+                None
+            }
             "RANDOM" => {
+                debug!("Random separator char");
                 if self.rules.match_random_char {
+                    debug!("Using the same random char for all separators");
                     if self.selected_char.is_none() {
-                        self.selected_char = self.get_rand_char()
+                        let char = self.get_rand_char();
+                        debug!("No random char selected, generating one: {:?}", char);
+                        self.selected_char = char
                     }
                     self.selected_char
                 } else {
-                    self.get_rand_char()
+                    let char = self.get_rand_char();
+                    debug!("Random char selected: {:?}", char);
+                    char
                 }
             }
-            _ => self.rules.separator_char.chars().min(),
+            _ => {
+                debug!("Separator char: {}", &*self.rules.separator_char);
+                self.rules.separator_char.chars().min()
+            }
         }
     }
 
@@ -195,6 +213,7 @@ impl Generator {
         let mut builder = String::new();
         let mut itr = words.iter();
         while let Some(word) = itr.next() {
+            debug!("Itr len on add_separators: {}, with word: {}", itr.len(), word);
             if itr.len() > 0 {
                 let char = self.get_separator();
                 if char.is_some() {
@@ -203,6 +222,7 @@ impl Generator {
             }
             builder.push_str(word);
         }
+        debug!("Final string: {}", builder);
         builder
     }
 }
