@@ -96,7 +96,8 @@ impl Generator {
                 transformed_words.push(str);
             }),
             "UPPERCASE_ALL_BUT_FIRST" => words.iter().for_each(|word| {
-                let mut c = word.to_uppercase().chars();
+                let uppercase = word.to_uppercase();
+                let mut c = uppercase.chars();
                 let str = match c.next() {
                     None => String::new(),
                     Some(first) => first.to_lowercase().collect::<String>() + c.as_str(),
