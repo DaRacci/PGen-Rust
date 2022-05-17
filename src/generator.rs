@@ -82,7 +82,7 @@ impl Generator {
 
     fn get_words(&mut self) -> Vec<String> {
         let mut words: Vec<String> = Vec::with_capacity(self.rules.amount);
-        for _ in 0..self.rules.amount {
+        for _ in 0..self.rules.words {
             let length = self.seed.gen_range(self.rules.min_length..self.rules.max_length);
             let clamped = length.clamp(3, 9);
             let array = self.map.get(clamped.to_string().as_str()).unwrap();
