@@ -15,17 +15,17 @@ fn main() {
         .subcommand_required(true)
         .arg_required_else_help(true)
         .args([
-            arg!(-w --words [WORDS] "How many words should be in this password."),
-            arg!(-m --minLength [MIN_LENGTH] "Minimum length of the words"),
-            arg!(-n --maxLength [MAX_LENGTH] "Maximum length of the words"),
-            arg!(-t --transform [TRANSFORM] "What transformation mode to use, Options are [NONE, CAPITALIZE, CAPITALISE_ALL_BUT_FIRST_LETTER, UPPERCASE, LOWERCASE, RANDOM]"),
-            arg!(-s --separatorChar [SEPARATOR_CHAR] "Leave blank or 'none' for no split, 'random' to use randomised characters or use any other UTF-8 compliant character for between words."),
-            arg!(-c --matchRandomChar [MATCH_RANDOM_CHAR] "Instead of everyone separator being random they will all use the same one random char."),
-            arg!(-r --separatorAlphabet [SEPARATOR_ALPHABET] "Defines the random alphabet used between words."),
-            arg!(-b --digitsBefore [DIGITS_BEFORE] "Sets how may digits should be before the password."),
-            arg!(-a --digitsAfter [DIGITS_AFTER] "Sets how many digits should be after the password."),
-            arg!(--amount [AMOUNT] "The amount of passwords to generate."),
-            arg!(-d --debug [DEBUG] "Enables debug mode."),
+            arg!(-w --words [WORDS] "How many words should be in this password.").id("WORDS"),
+            arg!(-m --minLength [MIN_LENGTH] "Minimum length of the words").id("MIN_LENGTH"),
+            arg!(-n --maxLength [MAX_LENGTH] "Maximum length of the words").id("MAX_LENGTH"),
+            arg!(-t --transform [TRANSFORM] "What transformation mode to use, Options are [NONE, CAPITALIZE, CAPITALISE_ALL_BUT_FIRST_LETTER, UPPERCASE, LOWERCASE, RANDOM]").id("TRANSFORM"),
+            arg!(-s --separatorChar [SEPARATOR_CHAR] "Leave blank or 'none' for no split, 'random' to use randomised characters or use any other UTF-8 compliant character for between words.").id("SEPARATOR_CHAR"),
+            arg!(-c --matchRandomChar [MATCH_RANDOM_CHAR] "Instead of everyone separator being random they will all use the same one random char.").id("MATCH_RANDOM_CHAR"),
+            arg!(-r --separatorAlphabet [SEPARATOR_ALPHABET] "Defines the random alphabet used between words.").id("SEPARATOR_ALPHABET"),
+            arg!(-b --digitsBefore [DIGITS_BEFORE] "Sets how may digits should be before the password.").id("DIGITS_BEFORE"),
+            arg!(-a --digitsAfter [DIGITS_AFTER] "Sets how many digits should be after the password.").id("DIGITS_AFTER"),
+            arg!(--amount [AMOUNT] "The amount of passwords to generate.").id("AMOUNT"),
+            arg!(-d --debug "Enables debug mode.").id("DEBUG"),
         ])
         .subcommand(
             Command::new("generate")
