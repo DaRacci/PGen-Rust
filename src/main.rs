@@ -1,42 +1,97 @@
 mod asset;
 mod generator;
 mod rules;
+mod transformation;
 
 #[macro_use]
 extern crate log;
 extern crate simplelog;
+extern crate strum_macros;
 
 use crate::generator::Generator;
 use crate::rules::Rules;
-use clap::{arg, command, Command};
+use crate::transformation::Transformation;
+use clap::{arg, command, Arg, Command};
 use simplelog::{debug, error, ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 use std::fs::File;
 use std::path::Path;
 use std::{env, process};
+use strum::IntoEnumIterator;
 
 fn main() {
-    // TODO: Removing adding true or false and just toggle it
     let matches = command!()
         .propagate_version(true)
         .subcommand_required(true)
         .arg_required_else_help(true)
         .args([
-            arg!(-w --words [WORDS] "How many words should be in this password.").id("WORDS"),
-            arg!(-m --minLength [MIN_LENGTH] "Minimum length of the words").id("MIN_LENGTH"),
-            arg!(-n --maxLength [MAX_LENGTH] "Maximum length of the words").id("MAX_LENGTH"),
-            arg!(-t --transform [TRANSFORM] "What transformation mode to use, Options are [NONE, CAPITALIZE, CAPITALISE_ALL_BUT_FIRST_LETTER, UPPERCASE, LOWERCASE, RANDOM]").id("TRANSFORM"),
-            arg!(-s --separatorChar [SEPARATOR_CHAR] "Leave blank or 'none' for no split, 'random' to use randomised characters or use any other UTF-8 compliant character for between words.").id("SEPARATOR_CHAR"),
-            arg!(-c --matchRandomChar [MATCH_RANDOM_CHAR] "Instead of everyone separator being random they will all use the same one random char.").id("MATCH_RANDOM_CHAR"),
-            arg!(-r --separatorAlphabet [SEPARATOR_ALPHABET] "Defines the random alphabet used between words.").id("SEPARATOR_ALPHABET"),
-            arg!(-b --digitsBefore [DIGITS_BEFORE] "Sets how may digits should be before the password.").id("DIGITS_BEFORE"),
-            arg!(-a --digitsAfter [DIGITS_AFTER] "Sets how many digits should be after the password.").id("DIGITS_AFTER"),
-            arg!(--amount [AMOUNT] "The amount of passwords to generate.").id("AMOUNT"),
-            arg!(-d --debug "Enables debug mode.").id("DEBUG"),
+            Arg::new("WORDS")
+                .help(format!("The number of words to generate for each password (default: {})", Rules::default().words).as_str())
+                .takes_value(true)
+                .short('w')
+                .long("words"),
+            Arg::new("MIN_LENGTH")
+                .help(format!("The minimum length of each word (default: {}, min: 3)", Rules::default().min_length).as_str())
+                .takes_value(true)
+                .short('m')
+                .long("min-length"),
+            Arg::new("MAX_LENGTH")
+                .help(format!("The maximum length of each word (default: {}, max: 9)", Rules::default().max_length).as_str())
+                .takes_value(true)
+                .short('M')
+                .long("max-length"),
+            Arg::new("DIGITS_BEFORE")
+                .help(format!("The number of digits before the words (default: {})", Rules::default().digits_before).as_str())
+                .takes_value(true)
+                .short('d')
+                .long("digits-before"),
+            Arg::new("DIGITS_AFTER")
+                .help(format!("The number of digits after the words (default: {})", Rules::default().digits_after).as_str())
+                .takes_value(true)
+                .short('D')
+                .long("digits-after"),
+            Arg::new("TRANSFORM")
+                .help(
+                    format!(
+                        "What transformation mode to use, Options are {:?} (default: {})",
+                        Transformation::iter().collect::<Vec<_>>(),
+                        Rules::default().transform
+                    )
+                    .as_str(),
+                )
+                .takes_value(true)
+                .short('t')
+                .long("transform"),
+            Arg::new("SEPARATOR_CHAR")
+                .help(format!("The character to use to separate the words (default: \"{}\")", Rules::default().separator_char).as_str())
+                .takes_value(true)
+                .short('s')
+                .long("separator-char"),
+            Arg::new("SEPARATOR_ALPHABET")
+                .help(format!("The array of characters as separators (default: \"{}\")", Rules::default().separator_alphabet).as_str())
+                .takes_value(true)
+                .short('S')
+                .long("separator-alphabet"),
+            Arg::new("MATCH_RANDOM_CHAR")
+                .help(
+                    format!(
+                        "Do not use the same random character for each separator rather than a new random each time (default: {})",
+                        Rules::default().match_random_char
+                    )
+                    .as_str(),
+                )
+                .short('r')
+                .long("match-random-char"),
+            Arg::new("AMOUNT")
+                .help(format!("The number of passwords to generate (default: {})", Rules::default().amount).as_str())
+                .takes_value(true)
+                .short('a')
+                .long("amount"),
+            Arg::new("DEBUG").help("Enable debug logging").long("debug"),
         ])
         .subcommand(
             Command::new("generate")
                 .about("Generate some new passwords.")
-                .arg(arg!([CONFIG] "The config file to use."))
+                .arg(arg!([CONFIG] "The config file to use.")),
         )
         .get_matches();
 
@@ -140,13 +195,9 @@ fn main() {
                 }
             });
 
-            matches.value_of("MATCH_RANDOM_CHAR").then(|match_random_char| match match_random_char.parse() {
-                Ok(bool) => rules.match_random_char = bool,
-                Err(_) => {
-                    error!("Couldn't parse {} as a boolean.\nExiting...", match_random_char);
-                    process::exit(1);
-                }
-            });
+            if matches.is_present("MATCH_RANDOM_CHAR") {
+                rules.match_random_char = false;
+            }
 
             matches.value_of("TRANSFORM").then(|transform| rules.transform = Box::from(transform));
             matches
