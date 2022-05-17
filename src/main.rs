@@ -15,6 +15,7 @@ use std::path::Path;
 use std::{env, process};
 
 fn main() {
+    // TODO: Removing adding true or false and just toggle it
     let matches = command!()
         .propagate_version(true)
         .subcommand_required(true)
@@ -160,7 +161,7 @@ fn main() {
             let mut generator = Generator::new(rules);
             let passwords = generator.generate();
 
-            println!("{}", passwords.join("\n"));
+            info!("Ask and thou shall receive, here be thine passwords!\n{}", passwords.join("\n"));
         }
         _ => {}
     }

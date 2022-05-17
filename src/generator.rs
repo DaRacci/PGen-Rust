@@ -33,7 +33,7 @@ impl Generator {
     }
 
     pub fn generate(&mut self) -> Vec<String> {
-        let passwords = Vec::with_capacity(self.rules.amount);
+        let mut passwords = Vec::with_capacity(self.rules.amount);
         // TODO: Holy shit this is ugly
         let max_length = ((self.rules.max_length * self.rules.amount)
             + (self.rules.digits_before + self.rules.digits_after)
@@ -73,6 +73,7 @@ impl Generator {
                 }
             }
 
+            passwords.push(password);
             self.selected_char = None; // Reset for each password.
         }
 
