@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::fmt::{Debug, Formatter};
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
@@ -29,5 +30,22 @@ impl Default for Rules {
             digits_after: 3,
             amount: 3,
         }
+    }
+}
+
+impl Debug for Rules {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Rules")
+            .field("words", &self.words)
+            .field("min_length", &self.min_length)
+            .field("max_length", &self.max_length)
+            .field("transform", &self.transform)
+            .field("separator_char", &self.separator_char)
+            .field("separator_alphabet", &self.separator_alphabet)
+            .field("match_random_char", &self.match_random_char)
+            .field("digits_before", &self.digits_before)
+            .field("digits_after", &self.digits_after)
+            .field("amount", &self.amount)
+            .finish()
     }
 }

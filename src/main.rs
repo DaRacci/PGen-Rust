@@ -1,10 +1,14 @@
 mod generator;
 mod rules;
 
+#[macro_use]
+extern crate log;
+extern crate simplelog;
+
 use crate::generator::Generator;
 use crate::rules::Rules;
 use clap::{arg, command, Command};
-use log::{debug, error};
+use simplelog::{debug, error, ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 use std::fs::File;
 use std::path::Path;
 use std::{env, process};
@@ -33,6 +37,17 @@ fn main() {
                 .arg(arg!([CONFIG] "The config file to use."))
         )
         .get_matches();
+
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            if matches.is_present("DEBUG") { LevelFilter::Debug } else { LevelFilter::Info },
+            Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(LevelFilter::max(), Config::default(), File::create("pgen.log").unwrap()),
+    ])
+    .unwrap();
 
     let mut rules: Rules;
 
@@ -138,6 +153,8 @@ fn main() {
             matches
                 .value_of("SEPARATOR_ALPHABET")
                 .then(|separator_alphabet| rules.separator_alphabet = Box::from(separator_alphabet));
+
+            debug!("{:?}", rules);
 
             let mut generator = Generator::new(rules);
             let passwords = generator.generate();
