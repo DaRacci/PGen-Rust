@@ -107,7 +107,7 @@ impl Generator {
     fn transform_words(&mut self, words: &Vec<String>) -> Vec<String> {
         let mut transformed_words: Vec<String> = Vec::with_capacity(words.len());
 
-        match Transformation::try_from(&*self.rules.transform).unwrap() {
+        match Transformation::try_from(&*self.rules.transform.to_uppercase()).unwrap() {
             Transformation::NONE => {
                 debug!("No transformation, doing nothing.");
                 transformed_words = words.clone();
