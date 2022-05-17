@@ -98,8 +98,8 @@ impl Generator {
     fn get_digits(&mut self, int: usize) -> String {
         let mut digits = String::new();
         for _ in 0..int {
-            let digit: u8 = self.seed.gen_range(0..9);
-            digits.push(digit as char);
+            let digit: u32 = self.seed.gen_range(0..9);
+            digits.push(char::from_digit(digit, 10).unwrap());
         }
         digits
     }
