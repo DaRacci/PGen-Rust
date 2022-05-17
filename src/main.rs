@@ -156,6 +156,8 @@ fn main() {
                 .value_of("SEPARATOR_ALPHABET")
                 .then(|separator_alphabet| rules.separator_alphabet = Box::from(separator_alphabet));
 
+            rules.sanity_checks();
+
             debug!("{:?}", rules);
 
             let mut generator = Generator::new(rules);
