@@ -6,7 +6,7 @@ use strum_macros::{EnumIter, EnumString};
 #[derive(Debug, EnumIter, EnumString)]
 pub enum Transformation {
     NONE,
-    CAPITALIZE,
+    CAPITALISE,
     ALL_EXCEPT_FIRST,
     UPPERCASE,
     RANDOM,

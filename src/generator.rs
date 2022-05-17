@@ -112,7 +112,7 @@ impl Generator {
                 debug!("No transformation, doing nothing.");
                 transformed_words = words.clone();
             }
-            Transformation::CAPITALIZE => words.iter().for_each(|word| {
+            Transformation::CAPITALISE => words.iter().for_each(|word| {
                 let mut c = word.chars();
                 let str = match c.next() {
                     None => String::new(),
