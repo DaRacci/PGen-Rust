@@ -1,13 +1,12 @@
-use rand::prelude::ThreadRng;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use rust_embed::EmbeddedFile;
 use serde_json::{Map, Value};
-use simplelog::{debug, error};
-use std::process;
+use simplelog::debug;
 
 use crate::asset::Asset;
 use crate::rules::Rules;
+use crate::Transformation;
 
 pub struct Generator {
     pub rules: Rules,
@@ -108,12 +107,12 @@ impl Generator {
     fn transform_words(&mut self, words: &Vec<String>) -> Vec<String> {
         let mut transformed_words: Vec<String> = Vec::with_capacity(words.len());
 
-        match &*self.rules.transform {
-            "NONE" => {
+        match Transformation::try_from(&*self.rules.transform).unwrap() {
+            Transformation::NONE => {
                 debug!("No transformation, doing nothing.");
                 transformed_words = words.clone();
             }
-            "CAPITALISE" => words.iter().for_each(|word| {
+            Transformation::CAPITALIZE => words.iter().for_each(|word| {
                 let mut c = word.chars();
                 let str = match c.next() {
                     None => String::new(),
@@ -122,22 +121,22 @@ impl Generator {
                 debug!("Capitalised word {}", str);
                 transformed_words.push(str);
             }),
-            "UPPERCASE_ALL_BUT_FIRST" => words.iter().for_each(|word| {
+            Transformation::ALL_EXCEPT_FIRST => words.iter().for_each(|word| {
                 let uppercase = word.to_uppercase();
                 let mut c = uppercase.chars();
                 let str = match c.next() {
                     None => String::new(),
                     Some(first) => first.to_lowercase().collect::<String>() + c.as_str(),
                 };
-                debug!("Uppercase all but first word {}", str);
+                debug!("Uppercase all but first character {}", str);
                 transformed_words.push(str);
             }),
-            "UPPERCASE" => words.iter().for_each(|word| {
+            Transformation::UPPERCASE => words.iter().for_each(|word| {
                 let uppercase = word.to_uppercase();
                 debug!("Uppercase word {}", uppercase);
                 transformed_words.push(uppercase);
             }),
-            "RANDOM" => words.iter().for_each(|word| {
+            Transformation::RANDOM => words.iter().for_each(|word| {
                 let mut builder = String::new();
                 for char in word.chars() {
                     let new = if self.seed.gen::<bool>() {
@@ -150,7 +149,7 @@ impl Generator {
                 debug!("Randomised uppercase and lowercase word {}", builder);
                 transformed_words.push(builder);
             }),
-            "ALTERNATING" => words.iter().for_each(|word| {
+            Transformation::ALTERNATING => words.iter().for_each(|word| {
                 let mut builder = String::new();
                 for (i, char) in word.chars().enumerate() {
                     let new = if i % 2 == 0 {
@@ -163,10 +162,6 @@ impl Generator {
                 debug!("Alternating uppercase and lowercase word {}", builder);
                 transformed_words.push(builder);
             }),
-            _ => {
-                error!("Unexpected transform type: {}", &*self.rules.transform);
-                process::exit(3);
-            }
         }
 
         debug!("Transformed words: {:?}", transformed_words);
