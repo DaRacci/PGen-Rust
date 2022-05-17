@@ -1,22 +1,34 @@
-use log::error;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use rust_embed::EmbeddedFile;
+use serde_json::{Map, Value};
+use simplelog::{debug, error};
 use std::process;
 
+use crate::asset::Asset;
 use crate::rules::Rules;
 
 pub struct Generator {
     pub rules: Rules,
     selected_char: Option<char>,
     seed: StdRng,
+    map: Map<String, Value>,
 }
 
 impl Generator {
     pub fn new(rules: Rules) -> Generator {
+        debug!("Creating new generator");
+
+        let asset: EmbeddedFile = Asset::get("words.json").unwrap();
+        let str = std::str::from_utf8(asset.data.as_ref()).unwrap();
+        let parsed: Value = serde_json::from_str(&str).unwrap();
+        let map = parsed.as_object().unwrap().clone();
+
         Generator {
             rules,
             selected_char: None,
             seed: StdRng::from_entropy(),
+            map,
         }
     }
 
@@ -68,7 +80,11 @@ impl Generator {
     fn get_words(&mut self) -> Vec<String> {
         let mut words: Vec<String> = Vec::with_capacity(self.rules.amount);
         for _ in 0..self.rules.amount {
-            words.push("testword".to_string()) // TODO get words from dictionary
+            let length = self.seed.gen_range(self.rules.min_length..self.rules.max_length);
+            let clamped = length.clamp(3, 9);
+            let array = self.map.get(clamped.to_string().as_str()).unwrap();
+            let word = array.get(self.seed.gen_range(0..array.as_array().unwrap().len())).unwrap();
+            words.push(word.as_str().unwrap().to_string());
         }
         words
     }

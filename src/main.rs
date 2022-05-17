@@ -1,3 +1,4 @@
+mod asset;
 mod generator;
 mod rules;
 
