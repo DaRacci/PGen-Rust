@@ -1,3 +1,4 @@
+use rand::prelude::ThreadRng;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use rust_embed::EmbeddedFile;
@@ -15,6 +16,7 @@ pub struct Generator {
     map: Map<String, Value>,
 }
 
+// TODO: RNG generates the same values quite often.
 impl Generator {
     pub fn new(rules: Rules) -> Generator {
         debug!("Creating new generator");
