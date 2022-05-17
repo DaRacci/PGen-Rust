@@ -3,19 +3,6 @@
 version = 3
 
 [[package]]
-name = "PGen-Rust"
-version = "0.1.0"
-dependencies = [
- "clap",
- "lazy_static",
- "log",
- "rand",
- "rust-embed",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "atty"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -199,6 +186,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e22443d1643a904602595ba1cd8f7d896afe56d26712531c5ff73a15b2fbf64"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "pgen-rust"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "log",
+ "rand",
+ "rust-embed",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
