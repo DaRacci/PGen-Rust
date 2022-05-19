@@ -90,8 +90,7 @@ impl Generator {
             let word = array.get(self.seed.gen_range(0..array.as_array().unwrap().len())).unwrap();
             words.push(word.as_str().unwrap().to_string());
         }
-        debug!("Got {} words", words.len());
-        debug!("{:?}", words);
+        debug!("Generated words: {:?}", words);
 
         words
     }
@@ -102,6 +101,7 @@ impl Generator {
             let digit: u32 = self.seed.gen_range(0..9);
             digits.push(char::from_digit(digit, 10).unwrap());
         }
+        debug!("Generated digits: {}", digits);
         digits
     }
 
@@ -109,17 +109,13 @@ impl Generator {
         let mut transformed_words: Vec<String> = Vec::with_capacity(words.len());
 
         match Transformation::try_from(&*self.rules.transform.to_uppercase()).unwrap() {
-            Transformation::NONE => {
-                debug!("No transformation, doing nothing.");
-                transformed_words = words.clone();
-            }
+            Transformation::NONE => transformed_words = words.clone(),
             Transformation::CAPITALISE => words.iter().for_each(|word| {
                 let mut c = word.chars();
                 let str = match c.next() {
                     None => String::new(),
                     Some(first) => first.to_uppercase().collect::<String>() + c.as_str(),
                 };
-                debug!("Capitalised word {}", str);
                 transformed_words.push(str);
             }),
             Transformation::ALL_EXCEPT_FIRST => words.iter().for_each(|word| {
@@ -129,12 +125,10 @@ impl Generator {
                     None => String::new(),
                     Some(first) => first.to_lowercase().collect::<String>() + c.as_str(),
                 };
-                debug!("Uppercase all but first character {}", str);
                 transformed_words.push(str);
             }),
             Transformation::UPPERCASE => words.iter().for_each(|word| {
                 let uppercase = word.to_uppercase();
-                debug!("Uppercase word {}", uppercase);
                 transformed_words.push(uppercase);
             }),
             Transformation::RANDOM => words.iter().for_each(|word| {
@@ -147,7 +141,6 @@ impl Generator {
                     };
                     builder.push_str(&*new);
                 }
-                debug!("Randomised uppercase and lowercase word {}", builder);
                 transformed_words.push(builder);
             }),
             Transformation::ALTERNATING => words.iter().for_each(|word| {
@@ -156,7 +149,6 @@ impl Generator {
                     let new = if i % 2 == 0 { char.to_uppercase().to_string() } else { char.to_lowercase().to_string() };
                     builder.push_str(&*new);
                 }
-                debug!("Alternating uppercase and lowercase word {}", builder);
                 transformed_words.push(builder);
             }),
         }
