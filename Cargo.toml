@@ -22,3 +22,5 @@ serde = { version = "1.0.136", features = ["derive"] }
 rust-embed="6.4.0"
 strum = { version = "0.24.0", feature = ["derive"] }
 strum_macros = "0.24"
+dirs = "1.0.5"
+toml = "0.5.9"
