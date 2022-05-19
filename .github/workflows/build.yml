@@ -8,7 +8,17 @@ jobs:
   build_matrix:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [linux, windows, macos]
+        include:
+          - build: linux
+              os: ubuntu-latest
+              file: pgen-rust
+          - build: windows
+              os: windows-latest
+              file: pgen-rust.exe
+          - build: macos
+              os: macos-latest
+              file: pgen-rust
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -28,18 +38,10 @@ jobs:
           command: build
           args: --release
 
-      - id: exe
-        run: INPUT=${{ env.UPPERCASE_VAR }} echo "::set-output name=lowerCaseValue::${INPUT,,}"
-
-
       - name: Strip files
-        run: |
-          strip target/release/pgen-rust
-          strip target/release/pgen-rust.exe
+        run: strip target/release/${{ matrix.file }}
 
       - uses: actions/upload-artifact@v3.0.0
         with:
           name: PGen-${{ matrix.os }}
-          path: |
-            target/release/pgen-rust
-            target/release/pgen-rust.exe
+          path: target/release/${{ matrix.file }}
