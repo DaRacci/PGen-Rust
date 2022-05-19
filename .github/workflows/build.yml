@@ -1,5 +1,6 @@
 on:
   push:
+    paths: ["src/*"]
     branches: [master]
 
 name: CI
@@ -43,5 +44,5 @@ jobs:
 
       - uses: actions/upload-artifact@v3.0.0
         with:
-          name: PGen-${{ matrix.os }}
+          name: PGen-${{ matrix.build }}
           path: target/release/${{ matrix.file }}
