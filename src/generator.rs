@@ -154,11 +154,7 @@ impl Generator {
             Transformation::ALTERNATING => words.iter().for_each(|word| {
                 let mut builder = String::new();
                 for (i, char) in word.chars().enumerate() {
-                    let new = if i % 2 == 0 {
-                        char.to_uppercase().to_string()
-                    } else {
-                        char.to_lowercase().to_string()
-                    };
+                    let new = if i % 2 == 0 { char.to_uppercase().to_string() } else { char.to_lowercase().to_string() };
                     builder.push_str(&*new);
                 }
                 debug!("Alternating uppercase and lowercase word {}", builder);

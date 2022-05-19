@@ -11,15 +11,147 @@ extern crate strum_macros;
 use crate::generator::Generator;
 use crate::rules::Rules;
 use crate::transformation::Transformation;
-use clap::{arg, command, Arg, Command};
+use clap::{arg, command, Arg, ArgMatches, Command};
 use simplelog::{debug, error, ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger};
+use std::collections::HashMap;
 use std::fs::File;
-use std::path::Path;
-use std::{env, process};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::{env, fs, process};
 use strum::IntoEnumIterator;
 
 fn main() {
-    let matches = command!()
+    let mut rules = init();
+    let matches = get_cli();
+    start_logger(matches.is_present("DEBUG"));
+    pass_supplied(&matches);
+    pass_args(&mut rules, &matches);
+    rules.sanity_checks();
+
+    debug!("{:?}", rules);
+
+    let mut generator = Generator::new(rules);
+    let passwords = generator.generate();
+
+    info!("Ask and thou shall receive, here be thine passwords!\n{}", passwords.join("\n"));
+}
+
+pub trait OptionExt<T> {
+    fn then<F, R>(self, f: F)
+    where
+        R: From<T>,
+        F: FnOnce(T) -> Option<R>;
+}
+
+impl<T> OptionExt<T> for Option<T> {
+    fn then<F, R>(self, f: F)
+    where
+        R: From<T>,
+        F: FnOnce(T) -> Option<R>,
+    {
+        if self.is_some() {
+            f(self.unwrap());
+        }
+    }
+}
+
+fn pass_supplied(matches: &ArgMatches) -> Option<Rules> {
+    let subcommand = matches.subcommand().unwrap().1;
+    let path: PathBuf = if let Some(str) = subcommand.value_of("CONFIG") {
+        let mut path = PathBuf::from(str);
+        if !path.exists() {
+            path = Path::new(env::current_dir().unwrap().to_str().unwrap()).join(path);
+            if !path.exists() {
+                error!("File {} does not exist", str);
+                process::exit(1);
+            }
+        }
+        path
+    } else {
+        None?
+    };
+
+    if !path.exists() {
+        error!("{} does not exist.", path.display());
+        process::exit(1);
+    } else if !path.is_file() {
+        error!("{} is not a file.", path.display());
+        process::exit(1);
+    }
+
+    let string = fs::read_to_string(&path).unwrap_or_else(|err| {
+        error!("Couldn't read {}: {}", path.display(), err);
+        process::exit(1);
+    });
+
+    match toml::from_str::<Rules>(&string) {
+        Ok(rules) => {
+            rules.sanity_checks();
+            Some(rules)
+        }
+        Err(err) => {
+            error!("Couldn't parse {}: {}", path.display(), err);
+            process::exit(1);
+        }
+    }
+}
+
+fn pass_args(rules: &mut Rules, matches: &ArgMatches) {
+    let mut args = HashMap::new();
+    matches.value_of("WORDS").then(|words| args.insert("words", words));
+    matches.value_of("MIN_LENGTH").then(|min_length| args.insert("min_length", min_length));
+    matches.value_of("MAX_LENGTH").then(|max_length| args.insert("max_length", max_length));
+    matches.value_of("DIGITS_BEFORE").then(|digits_before| args.insert("digits_before", digits_before));
+    matches.value_of("DIGITS_AFTER").then(|digits_after| args.insert("digits_after", digits_after));
+    matches.value_of("AMOUNT").then(|amount| args.insert("amount", amount));
+    matches.value_of("SEPARATOR_CHAR").then(|separator_char| args.insert("separator_char", separator_char));
+    matches.value_of("SEPARATOR_ALPHABET").then(|separator_alphabet| args.insert("separator_alphabet", separator_alphabet));
+    matches.value_of("TRANSFORM").then(|transform| args.insert("transform", transform));
+    if matches.is_present("MATCH_RANDOM_CHAR") {
+        rules.match_random_char = false
+    }
+
+    for (arg, value) in args {
+        match arg {
+            "words" => rules.words = unwrap_or_exit(&value),
+            "min_length" => rules.min_length = unwrap_or_exit(&value),
+            "max_length" => rules.max_length = unwrap_or_exit(&value),
+            "digits_before" => rules.digits_before = unwrap_or_exit(&value),
+            "digits_after" => rules.digits_after = unwrap_or_exit(&value),
+            "amount" => rules.amount = unwrap_or_exit(&value),
+            "separator_char" => rules.separator_char = Box::from(value),
+            "separator_alphabet" => rules.separator_alphabet = Box::from(value),
+            "transform" => rules.transform = Box::from(value),
+            "match_random_char" => rules.match_random_char = unwrap_or_exit(&value),
+            _ => {}
+        }
+    }
+}
+
+fn unwrap_or_exit<T>(str: &str) -> T
+where
+    T: FromStr,
+{
+    match str.parse::<T>() {
+        Ok(value) => value,
+        Err(_) => {
+            error!("Couldn't parse {} as {}", str, stringify!(T));
+            process::exit(1);
+        }
+    }
+}
+
+fn start_logger(debug: bool) {
+    CombinedLogger::init(vec![
+        TermLogger::new(if debug { LevelFilter::Debug } else { LevelFilter::Info }, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+        WriteLogger::new(LevelFilter::max(), Config::default(), File::create("pgen.log").unwrap()),
+    ])
+    .unwrap();
+}
+
+fn get_cli() -> ArgMatches {
+    return command!()
         .propagate_version(true)
         .subcommand_required(true)
         .arg_required_else_help(true)
@@ -88,169 +220,61 @@ fn main() {
                 .long("amount"),
             Arg::new("DEBUG").help("Enable debug logging").long("debug"),
         ])
-        .subcommand(
-            Command::new("generate")
-                .about("Generate some new passwords.")
-                .arg(arg!([CONFIG] "The config file to use.")),
-        )
+        .subcommand(Command::new("generate").about("Generate some new passwords.").arg(arg!([CONFIG] "The config file to use.")))
         .get_matches();
+}
 
-    CombinedLogger::init(vec![
-        TermLogger::new(
-            if matches.is_present("DEBUG") { LevelFilter::Debug } else { LevelFilter::Info },
-            Config::default(),
-            TerminalMode::Mixed,
-            ColorChoice::Auto,
-        ),
-        WriteLogger::new(LevelFilter::max(), Config::default(), File::create("pgen.log").unwrap()),
-    ])
-    .unwrap();
+fn init() -> Rules {
+    match env::consts::OS {
+        "windows" | "linux" | "macos" => {
+            let target_dir = dirs::config_dir().unwrap().join("PGen");
 
-    let mut rules: Rules;
-
-    match matches.subcommand() {
-        Some(("generate", sub_matches)) => {
-            rules = match sub_matches.value_of("CONFIG") {
-                None => Rules::default(),
-                Some(path_str) => {
-                    let path = Path::new(path_str);
-                    if !path.exists() {
-                        error!("The config file {} does not exist.", path.display());
-                        process::exit(1);
-                    }
-
-                    let attr = path.metadata().unwrap();
-                    debug!(
-                        "File Attributes: [isFile={},isSymlink={},readOnly={}]",
-                        attr.is_file(),
-                        attr.is_symlink(),
-                        attr.permissions().readonly()
-                    );
-
-                    let file = File::open(path).unwrap_or_else(|e| {
-                        error!("Couldn't open the config file {}: {}", path.display(), e);
-                        process::exit(2);
-                    });
-
-                    serde_json::from_reader(file).unwrap_or_else(|e| {
-                        error!("Failed to parse config file: {}", e);
-                        process::exit(1);
-                    })
-                }
-            };
-
-            matches.value_of("WORDS").then(|words| match words.parse() {
-                Ok(number) => rules.words = number,
-                Err(_) => {
-                    error!("Couldn't parse {} as a usize.\nExiting...", words);
+            if !target_dir.exists() {
+                fs::create_dir(&target_dir).unwrap_or_else(|err| {
+                    error!("Couldn't create directory {}: {}", target_dir.display(), err);
                     process::exit(1);
-                }
-            });
-
-            matches.value_of("MIN_LENGTH").then(|min_length| match min_length.parse() {
-                Ok(number) => rules.min_length = number,
-                Err(_) => {
-                    error!("Couldn't parse {} as a usize.\nExiting...", min_length);
-                    process::exit(1);
-                }
-            });
-
-            matches.value_of("MAX_LENGTH").then(|max_length| match max_length.parse() {
-                Ok(number) => rules.max_length = number,
-                Err(_) => {
-                    error!("Couldn't parse {} as a usize.\nExiting...", max_length);
-                    process::exit(1);
-                }
-            });
-
-            matches.value_of("MATCH_RANDOM_CHAR").then(|match_random_char| match match_random_char.parse() {
-                Ok(number) => rules.match_random_char = number,
-                Err(_) => {
-                    error!("Couldn't parse {} as a usize.\nExiting...", match_random_char);
-                    process::exit(1);
-                }
-            });
-
-            matches.value_of("DIGITS_BEFORE").then(|digits_before| match digits_before.parse() {
-                Ok(number) => rules.digits_before = number,
-                Err(_) => {
-                    error!("Couldn't parse {} as a usize.\nExiting...", digits_before);
-                    process::exit(1);
-                }
-            });
-
-            matches.value_of("DIGITS_AFTER").then(|digits_after| match digits_after.parse() {
-                Ok(number) => rules.digits_after = number,
-                Err(_) => {
-                    error!("Couldn't parse {} as a usize.\nExiting...", digits_after);
-                    process::exit(1);
-                }
-            });
-
-            matches.value_of("AMOUNT").then(|amount| match amount.parse() {
-                Ok(number) => rules.amount = number,
-                Err(_) => {
-                    error!("Couldn't parse {} as a usize.\nExiting...", amount);
-                    process::exit(1);
-                }
-            });
-
-            if matches.is_present("MATCH_RANDOM_CHAR") {
-                rules.match_random_char = false;
+                });
             }
 
-            matches.value_of("TRANSFORM").then(|transform| rules.transform = Box::from(transform));
-            matches
-                .value_of("SEPARATOR_CHAR")
-                .then(|separator_char| rules.separator_char = Box::from(separator_char));
-            matches
-                .value_of("SEPARATOR_ALPHABET")
-                .then(|separator_alphabet| rules.separator_alphabet = Box::from(separator_alphabet));
-
-            rules.sanity_checks();
-
-            debug!("{:?}", rules);
-
-            let mut generator = Generator::new(rules);
-            let passwords = generator.generate();
-
-            info!("Ask and thou shall receive, here be thine passwords!\n{}", passwords.join("\n"));
+            return get_config(&target_dir);
         }
-        _ => {}
-    }
-}
-
-pub trait OptionExt<T> {
-    fn then<F>(self, f: F)
-    where
-        F: FnOnce(T) -> ();
-}
-
-impl<T> OptionExt<T> for Option<T> {
-    fn then<F>(self, f: F)
-    where
-        F: FnOnce(T) -> (),
-    {
-        if self.is_some() {
-            f(self.unwrap());
-        }
-    }
-}
-
-fn init() {
-    match env::consts::OS {
-        "windows" => {
-            println!("Windows is not supported yet.");
-        }
-        "macos" => {
-            println!("MacOS is not supported yet.");
-        }
-        "linux" => {
-            println!("Linux is not supported yet.");
-        }
-        other => {
-            error!("{} is not supported, please use windows, linux, or macos.", other);
+        _ => {
+            error!("Unsupported OS.");
             process::exit(1);
         }
     }
+}
+
+fn get_config(target_dir: &Path) -> Rules {
+    let config_file = target_dir.join("PGen.conf");
+    if !config_file.exists() {
+        let mut file = File::create(&config_file).unwrap_or_else(|err| {
+            error!("Couldn't create file {}: {}", config_file.display(), err);
+            process::exit(1);
+        });
+        let string = toml::ser::to_string_pretty(&Rules::default()).unwrap();
+        file.write_all(string.as_bytes()).unwrap_or_else(|err| {
+            error!("Couldn't write to file {}: {}", config_file.display(), err);
+            process::exit(1);
+        });
+        return Rules::default();
+    }
+
+    if !config_file.is_file() {
+        error!("{} is not a file.", config_file.display());
+        process::exit(1);
+    }
+
+    let string = fs::read_to_string(&config_file).unwrap_or_else(|err| {
+        error!("Couldn't read file {}: {}", config_file.display(), err);
+        process::exit(1);
+    });
+
+    let toml = toml::from_str::<Rules>(&string).unwrap_or_else(|err| {
+        error!("Couldn't parse file {}: {}", config_file.display(), err);
+        process::exit(1);
+    });
+
+    toml.sanity_checks();
+    return toml;
 }
