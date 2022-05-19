@@ -57,8 +57,9 @@ impl Generator {
             let transformed_words = self.transform_words(&words);
 
             match self.rules.digits_before {
-                0 => {}
+                0 => debug!("No digits before"),
                 digits => {
+                    debug!("Adding {} digits before", digits);
                     password.push_str(&*self.get_digits(digits));
                     self.get_separator().map(|c| password.push(c));
                 }
@@ -67,8 +68,9 @@ impl Generator {
             password.push_str(&*self.add_separators(&transformed_words));
 
             match self.rules.digits_after {
-                0 => {}
+                0 => debug!("No digits after"),
                 digits => {
+                    debug!("Adding {} digits after", digits);
                     self.get_separator().map(|c| password.push(c));
                     password.push_str(&*self.get_digits(digits));
                 }
@@ -209,16 +211,15 @@ impl Generator {
     fn add_separators(&mut self, words: &Vec<String>) -> String {
         let mut builder = String::new();
         let mut itr = words.iter();
-        while let Some(word) = itr.next() {
-            debug!("Itr len on add_separators: {}, with word: {}", itr.len(), word);
-            if itr.len() > 0 {
-                let char = self.get_separator();
-                if char.is_some() {
-                    builder.push(char.unwrap())
-                }
-            }
+
+        while itr.len() >= 1 {
+            let word = itr.next().unwrap();
             builder.push_str(word);
+            if itr.len() > 0 {
+                builder.push(self.get_separator().unwrap());
+            }
         }
+
         debug!("Final string: {}", builder);
         builder
     }
