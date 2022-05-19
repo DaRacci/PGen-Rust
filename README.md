@@ -2,6 +2,10 @@
 
 ---
 
+### Getting Started
+You can get the latest version of PGen from the [github actions artifacts](https://github.com/DaRacci/PGen-Rust/actions/workflows/build.yml/)
+or from one of these links: [linux](https://nightly.link/DaRacci/PGen-Rust/workflows/build/master/PGen-linux.zip), [windows](https://nightly.link/DaRacci/PGen-Rust/workflows/build/master/PGen-windows.zip), [macos](https://nightly.link/DaRacci/PGen-Rust/workflows/build/master/PGen-macos.zip)
+
 ### Usage
 From the command line you can use
 ``./pgen-rust generate`` this will run PGen with the default rules
@@ -12,7 +16,9 @@ Linux: $HOME/.config # or $XDG_CONFIG_HOME
 Mac: $HOME/Library/Preferences
 ```
 
-#### Arguments
+---
+
+### Arguments
 ```
 USAGE:
     pgen-rust [OPTIONS] <SUBCOMMAND>
@@ -64,7 +70,9 @@ SUBCOMMANDS:
     help        Print this message or the help of the given subcommand(s)
 ```
 
-#### Configuration file
+---
+
+### Configuration file
 
 When using the configuration file not all values must be present, the default values will be used in their place.
 
@@ -82,7 +90,9 @@ digits_after = 3
 amount = 3
 ```
 
-#### Using a configuration file in another location
+---
+
+### Using a configuration file in another location
 When running the generate subcommand you can specify a configuration file to use.
 This path will first be treated as an absolute path and if not found looked for in the current working directory.
 
@@ -93,7 +103,9 @@ Some examples of this would be:
 ./pgen-rust generate ../config.toml
 ```
 
-#### Rule hierarchy
+---
+
+### Rule hierarchy
 When running PGen rules will be assigned with the last checked value as the final value.
 Meaning that rules are assigned in an order of default, config file, supplied config file and finally cli arguments.
 
