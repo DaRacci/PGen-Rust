@@ -1,0 +1,34 @@
+on:
+  push:
+    branches: [master]
+
+name: CI
+
+jobs:
+  build_matrix:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v1
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+
+      - uses: actions/upload-artifact@v3.0.0
+        with:
+          name: PGen-${{ matrix.os }}
+          path: target/release/pgen-*
