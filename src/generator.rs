@@ -15,7 +15,6 @@ pub struct Generator {
     map: Map<String, Value>,
 }
 
-// TODO: RNG generates the same values quite often.
 impl Generator {
     pub fn new(rules: Rules) -> Generator {
         debug!("Creating new generator");
@@ -35,7 +34,7 @@ impl Generator {
 
     pub fn generate(&mut self) -> Vec<String> {
         let mut passwords = Vec::with_capacity(self.rules.amount);
-        // TODO: Holy shit this is ugly
+        // TODO: Holy shit this is ugly and also seems to get the math wrong.
         let max_length = ((self.rules.max_length * self.rules.amount)
             + (self.rules.digits_before + self.rules.digits_after)
             + (match self.rules.separator_char.len() {

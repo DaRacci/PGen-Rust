@@ -12,6 +12,7 @@ use crate::generator::Generator;
 use crate::rules::Rules;
 use crate::transformation::Transformation;
 use clap::{arg, command, Arg, ArgMatches, Command};
+use log::set_max_level;
 use simplelog::{debug, error, ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 use std::collections::HashMap;
 use std::fs::File;
@@ -24,12 +25,16 @@ use strum::IntoEnumIterator;
 fn main() {
     let mut rules = init();
     let matches = get_cli();
-    start_logger(matches.is_present("DEBUG"));
-    pass_supplied(&matches);
+    if matches.is_present("DEBUG") {
+        set_max_level(LevelFilter::Debug);
+    }
+    if let Some(supplied_rules) = pass_supplied(&matches) {
+        rules = supplied_rules;
+    }
     pass_args(&mut rules, &matches);
     rules.sanity_checks();
 
-    debug!("{:?}", rules);
+    debug!("Final rule set: {:?}", rules);
 
     let mut generator = Generator::new(rules);
     let passwords = generator.generate();
@@ -60,8 +65,10 @@ fn pass_supplied(matches: &ArgMatches) -> Option<Rules> {
     let subcommand = matches.subcommand().unwrap().1;
     let path: PathBuf = if let Some(str) = subcommand.value_of("CONFIG") {
         let mut path = PathBuf::from(str);
+        debug!("Trying to use path: {}", path.display());
         if !path.exists() {
             path = Path::new(env::current_dir().unwrap().to_str().unwrap()).join(path);
+            debug!("Trying to use path: {}", path.display());
             if !path.exists() {
                 error!("File {} does not exist", str);
                 process::exit(1);
@@ -71,6 +78,8 @@ fn pass_supplied(matches: &ArgMatches) -> Option<Rules> {
     } else {
         None?
     };
+
+    debug!("Trying to read file: {}", path.display());
 
     if !path.exists() {
         error!("{} does not exist.", path.display());
@@ -88,6 +97,7 @@ fn pass_supplied(matches: &ArgMatches) -> Option<Rules> {
     match toml::from_str::<Rules>(&string) {
         Ok(rules) => {
             rules.sanity_checks();
+            debug!("From supplied rules: {:?}", rules);
             Some(rules)
         }
         Err(err) => {
@@ -111,6 +121,8 @@ fn pass_args(rules: &mut Rules, matches: &ArgMatches) {
     if matches.is_present("MATCH_RANDOM_CHAR") {
         rules.match_random_char = false
     }
+
+    debug!("Supplied arguments {:?}", args);
 
     for (arg, value) in args {
         match arg {
@@ -140,14 +152,6 @@ where
             process::exit(1);
         }
     }
-}
-
-fn start_logger(debug: bool) {
-    CombinedLogger::init(vec![
-        TermLogger::new(if debug { LevelFilter::Debug } else { LevelFilter::Info }, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-        WriteLogger::new(LevelFilter::max(), Config::default(), File::create("pgen.log").unwrap()),
-    ])
-    .unwrap();
 }
 
 fn get_cli() -> ArgMatches {
@@ -225,6 +229,12 @@ fn get_cli() -> ArgMatches {
 }
 
 fn init() -> Rules {
+    CombinedLogger::init(vec![
+        TermLogger::new(LevelFilter::Debug, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+        WriteLogger::new(LevelFilter::max(), Config::default(), File::create("pgen.log").unwrap()),
+    ])
+    .unwrap();
+
     match env::consts::OS {
         "windows" | "linux" | "macos" => {
             let target_dir = dirs::config_dir().unwrap().join("PGen");
@@ -248,6 +258,8 @@ fn init() -> Rules {
 fn get_config(target_dir: &Path) -> Rules {
     let config_file = target_dir.join("PGen.conf");
     if !config_file.exists() {
+        debug!("Created config file {}", config_file.display());
+
         let mut file = File::create(&config_file).unwrap_or_else(|err| {
             error!("Couldn't create file {}: {}", config_file.display(), err);
             process::exit(1);
@@ -257,6 +269,7 @@ fn get_config(target_dir: &Path) -> Rules {
             error!("Couldn't write to file {}: {}", config_file.display(), err);
             process::exit(1);
         });
+
         return Rules::default();
     }
 
@@ -276,5 +289,8 @@ fn get_config(target_dir: &Path) -> Rules {
     });
 
     toml.sanity_checks();
+
+    debug!("Loaded config from def path: {:?}", toml);
+
     return toml;
 }
