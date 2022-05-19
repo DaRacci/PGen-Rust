@@ -8,7 +8,7 @@ jobs:
   build_matrix:
     strategy:
       matrix:
-        os: [linux, windows, macos]
+        build: [linux, windows, macos]
         include:
           - build: linux
             os: ubuntu-latest
