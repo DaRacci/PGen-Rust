@@ -28,10 +28,18 @@ jobs:
           command: build
           args: --release
 
+      - id: exe
+        run: INPUT=${{ env.UPPERCASE_VAR }} echo "::set-output name=lowerCaseValue::${INPUT,,}"
+
+
       - name: Strip files
-        run: strip target/release/pgen-rust$( if [ ${{ matrix.os }} = 'windows-latest' ]; then echo .exe ;fi)
+        run: |
+          strip target/release/pgen-rust
+          strip target/release/pgen-rust.exe
 
       - uses: actions/upload-artifact@v3.0.0
         with:
           name: PGen-${{ matrix.os }}
-          path: target/release/pgen-rust$( if [ ${{ matrix.os }} = 'windows-latest' ]; then echo .exe ;fi)
+          path: |
+            target/release/pgen-rust
+            target/release/pgen-rust.exe
