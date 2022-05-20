@@ -177,9 +177,8 @@ impl Generator {
                 if self.rules.match_random_char {
                     debug!("Using the same random char for all separators");
                     if self.selected_char.is_none() {
-                        let char = self.get_rand_char();
-                        debug!("No random char selected, generating one: {:?}", char);
-                        self.selected_char = char
+                        self.selected_char = self.get_rand_char();
+                        debug!("No random char selected, generating one: {}", self.selected_char.unwrap());
                     }
                     self.selected_char
                 } else {
