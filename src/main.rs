@@ -37,25 +37,6 @@ fn main() {
     info!("Ask and thou shall receive, here be thine passwords!\n{}", passwords.join("\n"));
 }
 
-pub trait OptionExt<T> {
-    fn then<F, R>(self, f: F)
-    where
-        R: From<T>,
-        F: FnOnce(T) -> Option<R>;
-}
-
-impl<T> OptionExt<T> for Option<T> {
-    fn then<F, R>(self, f: F)
-    where
-        R: From<T>,
-        F: FnOnce(T) -> Option<R>,
-    {
-        if self.is_some() {
-            f(self.unwrap());
-        }
-    }
-}
-
 fn pass_supplied(matches: &ArgMatches) -> Option<Rules> {
     let subcommand = matches.subcommand().unwrap().1;
     let path: PathBuf = if let Some(str) = subcommand.value_of("CONFIG") {
@@ -104,15 +85,15 @@ fn pass_supplied(matches: &ArgMatches) -> Option<Rules> {
 
 fn pass_args(rules: &mut Rules, matches: &ArgMatches) {
     let mut args = HashMap::new();
-    matches.value_of("WORDS").then(|words| args.insert("words", words));
-    matches.value_of("MIN_LENGTH").then(|min_length| args.insert("min_length", min_length));
-    matches.value_of("MAX_LENGTH").then(|max_length| args.insert("max_length", max_length));
-    matches.value_of("DIGITS_BEFORE").then(|digits_before| args.insert("digits_before", digits_before));
-    matches.value_of("DIGITS_AFTER").then(|digits_after| args.insert("digits_after", digits_after));
-    matches.value_of("AMOUNT").then(|amount| args.insert("amount", amount));
-    matches.value_of("SEPARATOR_CHAR").then(|separator_char| args.insert("separator_char", separator_char));
-    matches.value_of("SEPARATOR_ALPHABET").then(|separator_alphabet| args.insert("separator_alphabet", separator_alphabet));
-    matches.value_of("TRANSFORM").then(|transform| args.insert("transform", transform));
+    matches.value_of("WORDS").map(|words| args.insert("words", words));
+    matches.value_of("MIN_LENGTH").map(|min_length| args.insert("min_length", min_length));
+    matches.value_of("MAX_LENGTH").map(|max_length| args.insert("max_length", max_length));
+    matches.value_of("DIGITS_BEFORE").map(|digits_before| args.insert("digits_before", digits_before));
+    matches.value_of("DIGITS_AFTER").map(|digits_after| args.insert("digits_after", digits_after));
+    matches.value_of("AMOUNT").map(|amount| args.insert("amount", amount));
+    matches.value_of("SEPARATOR_CHAR").map(|separator_char| args.insert("separator_char", separator_char));
+    matches.value_of("SEPARATOR_ALPHABET").map(|separator_alphabet| args.insert("separator_alphabet", separator_alphabet));
+    matches.value_of("TRANSFORM").map(|transform| args.insert("transform", transform));
     if matches.is_present("MATCH_RANDOM_CHAR") {
         rules.match_random_char = false
     }
