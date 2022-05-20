@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
-use simplelog::error;
 use std::fmt::{Debug, Formatter};
-use std::process;
 
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
@@ -19,26 +17,24 @@ pub struct Rules {
 }
 
 impl Rules {
-    pub fn sanity_checks(&self) {
+    pub fn sanity_checks(&self) -> Result<(), String> {
         if self.words < 1 || self.words > 10 {
-            error!("Words must be within bounds of 1 and 10, received {}", self.words);
-            process::exit(3);
+            return Err(format!("Words must be within bounds of 1 and 10, received {}", self.words));
         }
 
         if self.min_length < 3 || self.min_length > 9 {
-            error!("Min length must be within bounds of 3 and 9, received {}", self.min_length);
-            process::exit(3);
+            return Err(format!("Min length must be within bounds of 3 and 9, received {}", self.min_length));
         }
 
         if self.max_length < 3 || self.max_length > 9 {
-            error!("Max length must be within bounds of 3 and 9, received {}", self.max_length);
-            process::exit(3);
+            return Err(format!("Max length must be within bounds of 3 and 9, received {}", self.max_length));
         }
 
         if self.min_length > self.max_length {
-            error!("Min length must be less than or equal to max length, received {}", self.max_length);
-            process::exit(3);
+            return Err(format!("Min length must be less than or equal to max length, received {}", self.max_length));
         }
+
+        Ok(())
     }
 }
 

@@ -10,7 +10,8 @@ use clap::{arg, command, Arg, ArgMatches, Command};
 use log::set_max_level;
 use simplelog::{debug, error, info, ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 use std::collections::HashMap;
-use std::fs::File;
+use std::error::Error;
+use std::fs::{create_dir, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -18,16 +19,16 @@ use std::{env, fs, process};
 use strum::IntoEnumIterator;
 
 fn main() {
-    let mut rules = init();
+    let mut rules = init().map_err(|e| handle_error(e.0, e.1)).unwrap();
     let matches = get_cli();
     if matches.is_present("DEBUG") {
         set_max_level(LevelFilter::Debug);
     }
-    if let Some(supplied_rules) = pass_supplied(&matches) {
+    if let Some(supplied_rules) = pass_supplied(&matches).map_err(|(s, e)| handle_error(s, e)).unwrap() {
         rules = supplied_rules;
     }
     pass_args(&mut rules, &matches);
-    rules.sanity_checks();
+    rules.sanity_checks().map_err(|e| handle_error(e, None)).unwrap();
 
     debug!("Final rule set: {:?}", rules);
 
@@ -37,50 +38,43 @@ fn main() {
     info!("Ask and thou shall receive, here be thine passwords!\n{}", passwords.join("\n"));
 }
 
-fn pass_supplied(matches: &ArgMatches) -> Option<Rules> {
-    let subcommand = matches.subcommand().unwrap().1;
-    let path: PathBuf = if let Some(str) = subcommand.value_of("CONFIG") {
-        let mut path = PathBuf::from(str);
-        debug!("Trying to use path: {}", path.display());
-        if !path.exists() {
-            path = Path::new(env::current_dir().unwrap().to_str().unwrap()).join(path);
-            debug!("Trying to use path: {}", path.display());
-            if !path.exists() {
-                error!("File {} does not exist", str);
-                process::exit(1);
-            }
+pub fn handle_error(reason: String, err: Option<Box<dyn Error>>) {
+    error!("{}", reason);
+    err.map(|e| debug!("{:?}", e));
+    process::exit(1);
+}
+
+fn pass_supplied(matches: &ArgMatches) -> Result<Option<Rules>, (String, Option<Box<dyn Error>>)> {
+    let subcommand = matches.subcommand().unwrap().1; // It should be safe i think
+    let path = match subcommand.value_of("CONFIG").map(|p| {
+        let mut temp_path = PathBuf::from(p);
+        if !temp_path.exists() || {
+            (temp_path = Path::new(env::current_dir().unwrap().to_str().unwrap()).join(temp_path));
+            !temp_path.exists()
+        } {
+            Err(format!("File {} does not exist", temp_path.display()))
+        } else {
+            Ok(temp_path)
         }
-        path
-    } else {
-        None?
+    }) {
+        Some(Ok(path)) => path,
+        Some(Err(reason)) => Err((reason, None))?,
+        _ => return Ok(None),
     };
 
     debug!("Trying to read file: {}", path.display());
 
-    if !path.exists() {
-        error!("{} does not exist.", path.display());
-        process::exit(1);
-    } else if !path.is_file() {
-        error!("{} is not a file.", path.display());
-        process::exit(1);
+    if !path.exists() || !path.is_file() {
+        return Err((format!("File {} does not exist or isn't a file.", path.display()), None));
     }
 
-    let string = fs::read_to_string(&path).unwrap_or_else(|err| {
-        error!("Couldn't read {}: {}", path.display(), err);
-        process::exit(1);
-    });
-
-    match toml::from_str::<Rules>(&string) {
-        Ok(rules) => {
-            rules.sanity_checks();
-            debug!("From supplied rules: {:?}", rules);
-            Some(rules)
-        }
-        Err(err) => {
-            error!("Couldn't parse {}: {}", path.display(), err);
-            process::exit(1);
-        }
-    }
+    return match fs::read_to_string(&path) {
+        Ok(string) => match toml::from_str::<Rules>(&string) {
+            Ok(rules) => rules.sanity_checks().map_err(|e| (e, None)).map(|_| Some(rules)),
+            Err(err) => Err((format!("Couldn't parse file {}", path.display()), Some(Box::new(err)))),
+        },
+        Err(err) => Err((format!("Couldn't read {}", path.display()), Some(Box::new(err)))),
+    };
 }
 
 fn pass_args(rules: &mut Rules, matches: &ArgMatches) {
@@ -204,69 +198,62 @@ fn get_cli() -> ArgMatches {
         .get_matches();
 }
 
-fn init() -> Rules {
+fn init() -> Result<Rules, (String, Option<Box<dyn Error>>)> {
     CombinedLogger::init(vec![
         TermLogger::new(LevelFilter::Debug, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
         WriteLogger::new(LevelFilter::max(), Config::default(), File::create("pgen.log").unwrap()),
     ])
     .unwrap();
 
-    match env::consts::OS {
+    return match env::consts::OS {
         "windows" | "linux" | "macos" => {
             let target_dir = dirs::config_dir().unwrap().join("PGen");
 
-            if !target_dir.exists() {
-                fs::create_dir(&target_dir).unwrap_or_else(|err| {
-                    error!("Couldn't create directory {}: {}", target_dir.display(), err);
-                    process::exit(1);
-                });
+            match target_dir.exists() || create_dir(&target_dir).is_ok() {
+                true => get_config(&target_dir),
+                false => Err((format!("Couldn't create directory {}", target_dir.display()), None)),
             }
-
-            return get_config(&target_dir);
         }
-        _ => {
-            error!("Unsupported OS.");
-            process::exit(1);
-        }
-    }
+        _ => Err(("Unsupported OS".to_string(), None)),
+    };
 }
 
-fn get_config(target_dir: &Path) -> Rules {
+fn get_config(target_dir: &Path) -> Result<Rules, (String, Option<Box<dyn Error>>)> {
     let config_file = target_dir.join("PGen.conf");
     if !config_file.exists() {
         debug!("Created config file {}", config_file.display());
 
-        let mut file = File::create(&config_file).unwrap_or_else(|err| {
-            error!("Couldn't create file {}: {}", config_file.display(), err);
-            process::exit(1);
-        });
         let string = toml::ser::to_string_pretty(&Rules::default()).unwrap();
-        file.write_all(string.as_bytes()).unwrap_or_else(|err| {
-            error!("Couldn't write to file {}: {}", config_file.display(), err);
-            process::exit(1);
-        });
+        let mut file = match File::create(&config_file) {
+            Ok(file) => file,
+            Err(err) => return Err((format!("Couldn't create config file {}", config_file.display()), Some(Box::new(err)))),
+        };
 
-        return Rules::default();
+        return match file.write_all(string.as_bytes()) {
+            Ok(_) => Ok(Rules::default()),
+            Err(err) => Err((format!("Couldn't write config file {}", config_file.display()), Some(Box::new(err)))),
+        };
     }
 
     if !config_file.is_file() {
-        error!("{} is not a file.", config_file.display());
-        process::exit(1);
+        return Err((format!("{} is not a file.", config_file.display()), None));
     }
 
-    let string = fs::read_to_string(&config_file).unwrap_or_else(|err| {
-        error!("Couldn't read file {}: {}", config_file.display(), err);
-        process::exit(1);
-    });
+    let string = match fs::read_to_string(&config_file) {
+        Ok(string) => string,
+        Err(err) => return Err((format!("Couldn't read config file {}", config_file.display()), Some(Box::new(err)))),
+    };
 
-    let toml = toml::from_str::<Rules>(&string).unwrap_or_else(|err| {
-        error!("Couldn't parse file {}: {}", config_file.display(), err);
-        process::exit(1);
-    });
+    let toml = match toml::from_str::<Rules>(&string) {
+        Ok(toml) => toml,
+        Err(err) => return Err((format!("Couldn't parse config file {}", config_file.display()), Some(Box::new(err)))),
+    };
 
-    toml.sanity_checks();
-
-    debug!("Loaded config from def path: {:?}", toml);
-
-    return toml;
+    return match toml.sanity_checks() {
+        Ok(_) => {
+            debug!("Loaded config from def path: {:?}", toml);
+            Ok(toml)
+        }
+        Err(err) => Err((err, None)),
+    };
 }
