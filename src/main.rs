@@ -3,17 +3,12 @@ mod generator;
 mod rules;
 mod transformation;
 
-#[macro_use]
-extern crate log;
-extern crate simplelog;
-extern crate strum_macros;
-
 use crate::generator::Generator;
 use crate::rules::Rules;
 use crate::transformation::Transformation;
 use clap::{arg, command, Arg, ArgMatches, Command};
 use log::set_max_level;
-use simplelog::{debug, error, ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger};
+use simplelog::{debug, error, info, ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
