@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use simplelog::error;
 use std::fmt::{Debug, Formatter};
 use std::process;
 
