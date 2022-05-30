@@ -200,7 +200,7 @@ fn get_cli() -> ArgMatches {
 
 fn init() -> Result<Rules, (String, Option<Box<dyn Error>>)> {
     CombinedLogger::init(vec![
-        TermLogger::new(LevelFilter::Debug, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+        TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
         WriteLogger::new(LevelFilter::max(), Config::default(), File::create("pgen.log").unwrap()),
     ])
     .unwrap();
