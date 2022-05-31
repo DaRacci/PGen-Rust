@@ -35,7 +35,7 @@ fn main() {
     let mut generator = Generator::new(rules);
     let passwords = generator.generate();
 
-    info!("Ask and thou shall receive, here be thine passwords!\n{}", passwords.join("\n"));
+    info!("Generated passwords:\n\n{}", passwords.join("\n"));
 }
 
 pub fn handle_error(reason: String, err: Option<Box<dyn Error>>) {
@@ -204,6 +204,8 @@ fn init() -> Result<Rules, (String, Option<Box<dyn Error>>)> {
         WriteLogger::new(LevelFilter::max(), Config::default(), File::create("pgen.log").unwrap()),
     ])
     .unwrap();
+
+
 
     return match env::consts::OS {
         "windows" | "linux" | "macos" => {
