@@ -35,7 +35,7 @@ fn main() {
     let mut generator = Generator::new(rules);
     let passwords = generator.generate();
 
-    info!("Generated passwords:\n\n{}", passwords.join("\n"));
+    info!("Generated passwords:\n\n{}\n", passwords.join("\n"));
 }
 
 pub fn handle_error(reason: String, err: Option<Box<dyn Error>>) {
