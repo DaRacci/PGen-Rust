@@ -7,8 +7,7 @@ use crate::generator::Generator;
 use crate::rules::Rules;
 use crate::transformation::Transformation;
 use clap::{arg, command, Arg, ArgMatches, Command};
-use log::set_max_level;
-use simplelog::{debug, error, info, ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger};
+use simplelog::{debug, error, info, ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, SharedLogger, TermLogger, TerminalMode, WriteLogger};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::{create_dir, File};
@@ -19,11 +18,8 @@ use std::{env, fs, process};
 use strum::IntoEnumIterator;
 
 fn main() {
-    let mut rules = init().map_err(|e| handle_error(e.0, e.1)).unwrap();
     let matches = get_cli();
-    if matches.is_present("DEBUG") {
-        set_max_level(LevelFilter::Debug);
-    }
+    let mut rules = init(&matches).map_err(|e| handle_error(e.0, e.1)).unwrap();
     if let Some(supplied_rules) = pass_supplied(&matches).map_err(|(s, e)| handle_error(s, e)).unwrap() {
         rules = supplied_rules;
     }
@@ -193,19 +189,35 @@ fn get_cli() -> ArgMatches {
                 .short('a')
                 .long("amount"),
             Arg::new("DEBUG").help("Enable debug logging").long("debug"),
+            Arg::new("LOG").help("Enable saving output to a log file.").long("log").takes_value(true),
         ])
         .subcommand(Command::new("generate").about("Generate some new passwords.").arg(arg!([CONFIG] "The config file to use.")))
         .get_matches();
 }
 
-fn init() -> Result<Rules, (String, Option<Box<dyn Error>>)> {
-    CombinedLogger::init(vec![
-        TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-        WriteLogger::new(LevelFilter::max(), Config::default(), File::create("pgen.log").unwrap()),
-    ])
-    .unwrap();
+fn init(matches: &ArgMatches) -> Result<Rules, (String, Option<Box<dyn Error>>)> {
+    let level = match matches.is_present("DEBUG") {
+        true => LevelFilter::Debug,
+        false => LevelFilter::Info,
+    };
+    let mut vec: Vec<Box<dyn SharedLogger>> = Vec::new();
+    let term_config = ConfigBuilder::new().set_time_level(LevelFilter::Off).build();
 
+    vec.push(TermLogger::new(level, term_config.clone(), TerminalMode::Mixed, ColorChoice::Auto));
+    if matches.is_present("LOG") {
+        let log_file_str = matches.value_of("LOG").unwrap_or("pgen.log");
+        let log_file = if let Ok(log_file) = File::open(log_file_str) {
+            log_file
+        } else {
+            match File::create(log_file_str) {
+                Ok(log_file) => log_file,
+                Err(err) => return Err((format!("Could not create log file: {}", err), Some(Box::new(err)))),
+            }
+        };
+        vec.push(WriteLogger::new(level, term_config, log_file));
+    }
 
+    CombinedLogger::init(vec).unwrap();
 
     return match env::consts::OS {
         "windows" | "linux" | "macos" => {
