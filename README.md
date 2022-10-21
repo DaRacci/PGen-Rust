@@ -3,8 +3,16 @@
 ---
 
 ### Getting Started
-You can get the latest version of PGen from the [github actions artifacts](https://github.com/DaRacci/PGen-Rust/actions/workflows/build.yml/)
+
+PGen is available on crates.io under the name rpgen standing for Rememberable Password Generator.
+Install it with cargo by running
+```bash
+cargo install rpgen
+```
+
+Alternatively if you don't have cargo installed or just want to manually, You can get the latest version of PGen from the [github actions artifacts](https://github.com/DaRacci/PGen-Rust/actions/workflows/build.yml/)
 or from one of these links: [linux](https://nightly.link/DaRacci/PGen-Rust/workflows/build/master/PGen-linux.zip), [windows](https://nightly.link/DaRacci/PGen-Rust/workflows/build/master/PGen-windows.zip), [macos](https://nightly.link/DaRacci/PGen-Rust/workflows/build/master/PGen-macos.zip)
+
 
 ### Usage
 From the command line you can use
