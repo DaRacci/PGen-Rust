@@ -13,13 +13,13 @@ jobs:
         include:
           - build: linux
             os: ubuntu-latest
-            file: pgen
+            file: rpgen
           - build: windows
             os: windows-latest
-            file: pgen.exe
+            file: rpgen.exe
           - build: macos
             os: macos-latest
-            file: pgen
+            file: rpgen
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo

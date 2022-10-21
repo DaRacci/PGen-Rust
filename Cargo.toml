@@ -1,5 +1,5 @@
 [package]
-name = "pgen"
+name = "rpgen"
 version = "0.1.1"
 authors = ["Racci <racci@racci.dev>"]
 edition = "2021"

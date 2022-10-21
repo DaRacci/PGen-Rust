@@ -8,7 +8,7 @@ or from one of these links: [linux](https://nightly.link/DaRacci/PGen-Rust/workf
 
 ### Usage
 From the command line you can use
-``./pgen generate`` this will run PGen with the default rules
+``./rpgen generate`` this will run PGen with the default rules
 and generate a new configuration file according to your operating system 
 ```yaml
 Windows: {FOLDERID_RoamingAppData} # eg: C:\Users\{USERNAME}\AppData\Roaming
@@ -21,7 +21,7 @@ Mac: $HOME/Library/Preferences
 ### Arguments
 ```
 USAGE:
-    pgen [OPTIONS] <SUBCOMMAND>
+    rpgen [OPTIONS] <SUBCOMMAND>
 
 OPTIONS:
     -a, --amount <AMOUNT>
@@ -98,9 +98,9 @@ This path will first be treated as an absolute path and if not found looked for 
 
 Some examples of this would be: 
 ```shell
-./pgen generate /home/racci/Documents/config.toml
-./pgen generate config.toml
-./pgen generate ../config.toml
+./rpgen generate /home/racci/Documents/config.toml
+./rpgen generate config.toml
+./rpgen generate ../config.toml
 ```
 
 ---
@@ -112,11 +112,11 @@ Meaning that rules are assigned in an order of default, config file, supplied co
 ---
 
 ### Running from a script
-Instead of writing `./pgen` and whatever options you need, you can instead use a batch, powershell or shell file like these:
-- Shell script (Assuming you have `pgen` in your path):
+Instead of writing `./rpgen` and whatever options you need, you can instead use a batch, powershell or shell file like these:
+- Shell script (Assuming you have `rpgen` in your path):
 ```shell
 #!/bin/bash
-pgen-rust -w 10 -m 5 -r -t ALTERNATING -s RANDOM -S =-;. -d 5 -D 0 -a 50 generate ~/Documents/config
+rpgen -w 10 -m 5 -r -t ALTERNATING -s RANDOM -S =-;. -d 5 -D 0 -a 50 generate ~/Documents/config
 ```
 - Powershell / Batch script
 ```shell
