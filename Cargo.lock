@@ -271,7 +271,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2eaf2319cd71dd9ff38c72bebde61b9ea657134abcf26ae4205f54f772a32810"
 
 [[package]]
-name = "pgen-rust"
+name = "pgen"
 version = "0.1.1"
 dependencies = [
  "clap",
