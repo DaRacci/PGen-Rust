@@ -42,7 +42,7 @@ jobs:
       - name: Strip files
         run: strip target/release/${{ matrix.file }}
 
-      - uses: actions/upload-artifact@v3.0.0
+      - uses: actions/upload-artifact@v3.1.3
         with:
           name: PGen-${{ matrix.build }}
           path: target/release/${{ matrix.file }}
