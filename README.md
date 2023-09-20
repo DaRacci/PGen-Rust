@@ -2,6 +2,8 @@
 
 ---
 
+# Note that this project has being moved into a monorepo and was renmaed to memorable-pass. Find it [here](https://github.com/AMTSupport/tools/tree/master/crates/memorable-pass)
+
 ### Getting Started
 
 PGen is available on crates.io under the name rpgen standing for Rememberable Password Generator.
